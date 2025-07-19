@@ -336,7 +336,7 @@
                 console.error('Error during analysis:', error);
                 resultsContainer.innerHTML = `<div class="text-center p-4 bg-red-100 text-red-700 rounded-lg fade-in">
                     <h3 class="font-bold">Analysis Failed</h3>
-                    <p>Sorry, something went wrong. Please try again later.</p>
+                    <p>Sorry, something went wrong. Please check the console for details and try again.</p>
                 </div>`;
                 resultsContainer.classList.remove('hidden');
                 previewContainer.classList.remove('hidden'); 
@@ -351,9 +351,9 @@
 
             const prompt = `You are an expert Feng Shui consultant. Analyze the provided image of a room based on modern, simplified Feng Shui principles. Focus on clutter, light, color, furniture placement, and the presence of natural elements.
 
-            Provide your analysis in a valid JSON object. Do not include any text before or after the JSON object. Ensure all property names and string values are enclosed in double quotes. Do not use single quotes.
+            IMPORTANT: Your response MUST be a single, valid JSON object. Do not include any text, markdown, or formatting before or after the JSON object. All property names and string values must be enclosed in double quotes.
 
-            The JSON object must follow this exact structure, using this example as a guide for the format:
+            The JSON object must follow this exact structure:
             {
               "score": 85,
               "summary": "A balanced and harmonious space with good energy flow.",
@@ -411,6 +411,9 @@
             });
 
             if (!response.ok) {
+                const errorBody = await response.text();
+                console.error("API request failed with status:", response.status);
+                console.error("Error body:", errorBody);
                 throw new Error(`API request failed with status ${response.status}`);
             }
 
@@ -429,6 +432,7 @@
                     throw new Error("Received invalid data from the analysis API.");
                 }
             } else {
+                 console.error("Invalid response structure from API:", result);
                  throw new Error("Invalid response structure from API");
             }
         }
