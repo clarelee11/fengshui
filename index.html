@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feng Shui AI Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        h1, h2, h3 {
+            font-family: 'Lora', serif;
+        }
+        .drop-zone {
+            border: 2px dashed #d1d5db;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .drop-zone.hover {
+            background-color: #eef2ff;
+            border-color: #6366f1;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #4f46e5;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .fade-in {
+            animation: fadeIn 0.6s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal {
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+             animation: fadeIn 0.4s ease-in-out;
+        }
+        /* Styles for the new tabbed modal */
+        .tab-btn {
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-btn.active {
+            color: #4f46e5;
+            border-bottom-color: #4f46e5;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-xl bg-white rounded-2xl shadow-2xl shadow-gray-300/30 p-6 md:p-8">
+        <div class="text-center">
+            <h1 class="text-4xl font-bold text-gray-800">Find Your Flow</h1>
+            <p class="text-gray-500 mt-2">Get an instant AI-powered Feng Shui analysis of your space.</p>
+        </div>
+        
+        <div class="text-center my-6">
+             <button id="guidance-btn" class="text-indigo-600 font-semibold hover:text-indigo-800 transition-colors group flex items-center justify-center mx-auto gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform group-hover:rotate-12"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                <span>Learn Feng Shui Basics</span>
+            </button>
+        </div>
+
+        <!-- Upload Area -->
+        <div id="upload-container" class="fade-in">
+            <label id="drop-zone-label" for="image-upload" class="drop-zone w-full p-8 flex flex-col items-center justify-center rounded-xl cursor-pointer bg-gray-50">
+                <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <p class="mt-4 text-lg font-semibold text-gray-700">Drop an image here</p>
+                <p class="text-sm text-gray-500">or <span class="text-indigo-600 font-semibold">click to browse</span></p>
+            </label>
+            <input type="file" id="image-upload" class="hidden" accept="image/png, image/jpeg, image/webp">
+        </div>
+
+        <!-- Image Preview Area -->
+        <div id="preview-container" class="hidden mt-6 text-center">
+            <img id="image-preview" class="max-h-80 w-auto mx-auto rounded-lg shadow-md" alt="Room preview">
+            <button id="analyze-btn" class="mt-6 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-lg shadow-indigo-500/30">
+                Analyze My Room
+            </button>
+             <button id="change-photo-btn" class="mt-3 w-full bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors">
+                Change Photo
+            </button>
+        </div>
+        
+        <!-- Loading Indicator -->
+        <div id="loader" class="hidden mt-8 flex flex-col items-center justify-center">
+            <div class="spinner"></div>
+            <p class="mt-4 text-gray-600 font-semibold">Analyzing the flow of Qi...</p>
+        </div>
+
+        <!-- Results Area -->
+        <div id="results-container" class="hidden mt-8">
+            <!-- Results will be injected here by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Guidance Modal -->
+    <div id="guidance-modal" class="modal hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+        <div class="modal-content bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="flex justify-between items-center p-5 border-b">
+                <h2 class="text-2xl font-bold text-gray-800">Feng Shui Fundamentals</h2>
+                <button id="close-modal-btn" class="text-gray-400 hover:text-gray-800 transition-colors rounded-full p-1 hover:bg-gray-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="flex border-b">
+                <button class="tab-btn flex-1 p-4 font-semibold text-gray-500 active" data-tab="tab-qi">Qi Flow</button>
+                <button class="tab-btn flex-1 p-4 font-semibold text-gray-500" data-tab="tab-command">Command</button>
+                <button class="tab-btn flex-1 p-4 font-semibold text-gray-500" data-tab="tab-elements">Elements</button>
+            </div>
+            <div class="p-6 md:p-8 overflow-y-auto">
+                <!-- Tab 1: Qi Flow -->
+                <div id="tab-qi" class="tab-content active">
+                    <h3 class="font-semibold text-xl text-gray-800 mb-3">Declutter for Clarity (Qi Flow)</h3>
+                    <p class="text-gray-600 mb-4">Qi (pronounced "chee") is the life force energy that flows through everything. In your home, you want this energy to flow smoothly and gently. Clutter blocks this flow, leading to stagnant energy that can make you feel stuck or tired.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+                        <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                            <svg class="w-16 h-16 mx-auto text-red-400" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 25L8 39H28L24 25H12Z" fill="#FCA5A5"></path><rect x="36" y="32" width="16" height="7" fill="#FCA5A5"></rect><path d="M18 20L22 12L28 16L24 24L18 20Z" fill="#FCA5A5"></path><path d="M40 18L36 28L48 30L50 20L40 18Z" fill="#FCA5A5"></path><path d="M10 50C10 44.4772 14.4772 40 20 40H44C49.5228 40 54 44.4772 54 50" stroke="#F87171" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                            <h4 class="font-semibold mt-2 text-red-800">Stagnant Qi</h4>
+                            <p class="text-sm text-red-700">Clutter, obstacles, and sharp corners create blockages.</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                            <svg class="w-16 h-16 mx-auto text-green-500" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 44C16.9391 44 22.4087 36 32 36C41.5913 36 47.0609 44 56 44" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path><path d="M8 28C16.9391 28 22.4087 20 32 20C41.5913 20 47.0609 28 56 28" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                            <h4 class="font-semibold mt-2 text-green-800">Flowing Qi</h4>
+                            <p class="text-sm text-green-700">Open, clear pathways allow energy to move freely.</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Tab 2: Command Position -->
+                <div id="tab-command" class="tab-content">
+                    <h3 class="font-semibold text-xl text-gray-800 mb-3">The Command Position</h3>
+                    <p class="text-gray-600 mb-4">This is the most powerful spot in a room. When you're at your desk or in bed, you should be able to see the door without being directly in its path. This puts you in "command" of your life, feeling secure and aware of opportunities coming your way.</p>
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <svg class="w-full" viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="1" y="1" width="198" height="118" rx="4" stroke="#e5e7eb" stroke-width="2"/>
+                            <rect x="85" y="110" width="30" height="10" fill="#a8a29e"/>
+                            <text x="100" y="100" font-family="Inter" font-size="8" fill="#78716c" text-anchor="middle">DOOR</text>
+                            <!-- Bad position -->
+                            <rect x="150" y="80" width="30" height="20" fill="#fecaca" stroke="#ef4444" stroke-width="1"/>
+                            <text x="165" y="93" font-family="Inter" font-size="7" fill="#b91c1c" text-anchor="middle">Weak</text>
+                            <path d="M100 110 L 165 100" stroke="#ef4444" stroke-width="1" stroke-dasharray="2 2"/>
+                             <!-- Good position -->
+                            <rect x="20" y="20" width="40" height="25" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+                            <text x="40" y="36" font-family="Inter" font-size="7" fill="#166534" text-anchor="middle">Command</text>
+                            <path d="M100 110 L 40 45" stroke="#22c55e" stroke-width="1" stroke-dasharray="2 2"/>
+                        </svg>
+                    </div>
+                </div>
+                <!-- Tab 3: Five Elements -->
+                <div id="tab-elements" class="tab-content">
+                    <h3 class="font-semibold text-xl text-gray-800 mb-3">Balance the Five Elements</h3>
+                    <p class="text-gray-600 mb-4">A harmonious room has a balance of all five elements. You can introduce them through colors, materials, and shapes.</p>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <!-- Wood -->
+                        <div class="text-center p-3 bg-green-50 rounded-lg">
+                            <svg class="w-12 h-12 mx-auto text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M18 9l-6 6-6-6"/></svg>
+                            <h4 class="font-semibold mt-2 text-green-800">Wood</h4><p class="text-xs text-green-700">Growth, Plants</p>
+                        </div>
+                        <!-- Fire -->
+                        <div class="text-center p-3 bg-red-50 rounded-lg">
+                             <svg class="w-12 h-12 mx-auto text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L9 9h6l-3 7v5"/></svg>
+                             <h4 class="font-semibold mt-2 text-red-800">Fire</h4><p class="text-xs text-red-700">Passion, Light</p>
+                        </div>
+                        <!-- Earth -->
+                        <div class="text-center p-3 bg-yellow-50 rounded-lg">
+                             <svg class="w-12 h-12 mx-auto text-yellow-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M4 6h16M6 18h12"/></svg>
+                             <h4 class="font-semibold mt-2 text-yellow-800">Earth</h4><p class="text-xs text-yellow-700">Stability, Stone</p>
+                        </div>
+                        <!-- Metal -->
+                        <div class="text-center p-3 bg-gray-100 rounded-lg">
+                             <svg class="w-12 h-12 mx-auto text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+                             <h4 class="font-semibold mt-2 text-gray-800">Metal</h4><p class="text-xs text-gray-700">Clarity, Round</p>
+                        </div>
+                        <!-- Water -->
+                        <div class="text-center p-3 bg-blue-50 rounded-lg">
+                             <svg class="w-12 h-12 mx-auto text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l3 6-3 6M9 6l3 6-3 6M15 6l3 6-3 6"/></svg>
+                             <h4 class="font-semibold mt-2 text-blue-800">Water</h4><p class="text-xs text-blue-700">Wisdom, Flow</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const uploadContainer = document.getElementById('upload-container');
+        const imageUpload = document.getElementById('image-upload');
+        const dropZoneLabel = document.getElementById('drop-zone-label');
+        const previewContainer = document.getElementById('preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const changePhotoBtn = document.getElementById('change-photo-btn');
+        const loader = document.getElementById('loader');
+        const resultsContainer = document.getElementById('results-container');
+        const guidanceBtn = document.getElementById('guidance-btn');
+        const guidanceModal = document.getElementById('guidance-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        let base64ImageData = null;
+
+        // --- Drag and Drop Handlers ---
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZoneLabel.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZoneLabel.addEventListener(eventName, () => dropZoneLabel.classList.add('hover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZoneLabel.addEventListener(eventName, () => dropZoneLabel.classList.remove('hover'), false);
+        });
+
+        dropZoneLabel.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            let dt = e.dataTransfer;
+            let files = dt.files;
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            if (files.length > 0) {
+                imageUpload.files = files;
+                handleImageUpload({ target: imageUpload });
+            }
+        }
+        
+        // Event Listeners
+        imageUpload.addEventListener('change', handleImageUpload);
+        analyzeBtn.addEventListener('click', handleAnalysis);
+        changePhotoBtn.addEventListener('click', resetUI);
+        guidanceBtn.addEventListener('click', openGuidanceModal);
+        closeModalBtn.addEventListener('click', closeGuidanceModal);
+        guidanceModal.addEventListener('click', (event) => {
+            if (event.target === guidanceModal) {
+                closeGuidanceModal();
+            }
+        });
+
+        // --- Modal & Tab Functions ---
+        function openGuidanceModal() {
+            guidanceModal.classList.remove('hidden');
+            guidanceModal.classList.add('fade-in');
+        }
+
+        function closeGuidanceModal() {
+            guidanceModal.classList.add('hidden');
+            guidanceModal.classList.remove('fade-in');
+        }
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+
+                const targetTab = button.getAttribute('data-tab');
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                    if (content.id === targetTab) {
+                        content.classList.add('active');
+                    }
+                });
+            });
+        });
+
+        // --- Core App Functions ---
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    base64ImageData = e.target.result.split(',')[1];
+                    imagePreview.src = e.target.result;
+                    uploadContainer.classList.add('hidden');
+                    previewContainer.classList.remove('hidden');
+                    previewContainer.classList.add('fade-in');
+                    resultsContainer.classList.add('hidden');
+                    resultsContainer.innerHTML = '';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function resetUI() {
+            base64ImageData = null;
+            imageUpload.value = '';
+            previewContainer.classList.add('hidden');
+            uploadContainer.classList.remove('hidden');
+            uploadContainer.classList.add('fade-in');
+            resultsContainer.classList.add('hidden');
+            resultsContainer.innerHTML = '';
+            loader.classList.add('hidden');
+        }
+
+        async function handleAnalysis() {
+            if (!base64ImageData) {
+                return;
+            }
+
+            loader.classList.remove('hidden');
+            loader.classList.add('fade-in');
+            previewContainer.classList.add('hidden');
+            resultsContainer.classList.add('hidden');
+
+            try {
+                const analysisResult = await getFengShuiAnalysis(base64ImageData);
+                displayResults(analysisResult);
+            } catch (error) {
+                console.error('Error during analysis:', error);
+                resultsContainer.innerHTML = `<div class="text-center p-4 bg-red-100 text-red-700 rounded-lg fade-in">
+                    <h3 class="font-bold">Analysis Failed</h3>
+                    <p>Sorry, something went wrong. Please try again later.</p>
+                </div>`;
+                resultsContainer.classList.remove('hidden');
+                previewContainer.classList.remove('hidden'); 
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+
+        async function getFengShuiAnalysis(imageData) {
+            const apiKey = ""; // API key is handled by the environment
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            const prompt = `You are an expert Feng Shui consultant. Analyze the provided image of a room based on modern, simplified Feng Shui principles. Focus on clutter, light, color, furniture placement, and the presence of natural elements.
+
+            Provide your analysis in a valid JSON object. Do not include any text before or after the JSON object. Ensure all property names and string values are enclosed in double quotes. Do not use single quotes.
+
+            The JSON object must follow this exact structure, using this example as a guide for the format:
+            {
+              "score": 85,
+              "summary": "A balanced and harmonious space with good energy flow.",
+              "analysis": [
+                {
+                  "principle": "Clutter & Flow",
+                  "rating": "Good",
+                  "comment": "The room is well-organized with clear pathways."
+                },
+                {
+                  "principle": "Lighting & Brightness",
+                  "rating": "Good",
+                  "comment": "Excellent natural light floods the space."
+                },
+                {
+                  "principle": "Color Palette",
+                  "rating": "Average",
+                  "comment": "The colors are pleasant but could use a balancing accent color."
+                },
+                {
+                  "principle": "Furniture Placement",
+                  "rating": "Good",
+                  "comment": "The main furniture is in a commanding position."
+                },
+                {
+                  "principle": "Natural Elements",
+                  "rating": "Needs Improvement",
+                  "comment": "Lacks natural elements like plants or wood tones."
+                }
+              ],
+              "suggestions": [
+                "Introduce a live plant to bring in wood element energy.",
+                "Add a colorful piece of art to activate the space.",
+                "Consider a small water feature for enhanced prosperity."
+              ]
+            }`;
+
+            const payload = {
+                contents: [{
+                    role: "user",
+                    parts: [
+                        { text: prompt },
+                        { inlineData: { mimeType: "image/jpeg", data: imageData } }
+                    ]
+                }],
+                 generationConfig: {
+                    responseMimeType: "application/json",
+                 }
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API request failed with status ${response.status}`);
+            }
+
+            const result = await response.json();
+            
+            if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts[0].text) {
+                const responseText = result.candidates[0].content.parts[0].text;
+                try {
+                    // Attempt to parse the JSON
+                    return JSON.parse(responseText);
+                } catch (e) {
+                    // If parsing fails, log the error and the problematic text
+                    console.error("Failed to parse JSON:", e);
+                    console.error("Problematic API response text:", responseText);
+                    // Re-throw the error to be caught by the handleAnalysis function
+                    throw new Error("Received invalid data from the analysis API.");
+                }
+            } else {
+                 throw new Error("Invalid response structure from API");
+            }
+        }
+
+        function displayResults(data) {
+            resultsContainer.innerHTML = ''; 
+            
+            const scoreColorClass = data.score >= 75 ? 'text-green-500' : data.score >= 50 ? 'text-yellow-500' : 'text-red-500';
+            const scoreRingClass = data.score >= 75 ? 'stroke-green-500' : data.score >= 50 ? 'stroke-yellow-500' : 'stroke-red-500';
+
+            const principleIcons = {
+                "Clutter & Flow": '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-indigo-500"><path d="M2 12h20M12 2a10 10 0 0 0-10 10c0 3.3 1.8 6.2 4.5 8M22 12a10 10 0 0 1-10 10c-3.3 0-6.2-1.8-8-4.5"/></svg>',
+                "Lighting & Brightness": '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-indigo-500"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>',
+                "Color Palette": '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-indigo-500"><circle cx="12" cy="12" r="10"/><path d="M12 2a7 7 0 1 0 10 10"/></svg>',
+                "Furniture Placement": '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-indigo-500"><path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3"/><path d="M3 11h18v10H3z"/><path d="M12 11v10"/></svg>',
+                "Natural Elements": '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-indigo-500"><path d="M12 22c4.97 0 9-4.03 9-9s-4.03-9-9-9-9 4.03-9 9 4.03 9 9 9z"/><path d="M12 2a7 7 0 0 0-7 7c0 2.89 1.42 5.45 3.59 6.91L12 22V2z"/></svg>'
+            };
+
+            const ratingColors = {
+                "Good": "text-green-600 bg-green-100",
+                "Average": "text-yellow-600 bg-yellow-100",
+                "Needs Improvement": "text-red-600 bg-red-100"
+            };
+
+            let analysisHtml = data.analysis.map(item => `
+                <div class="flex items-start space-x-4 p-4 bg-white rounded-lg border">
+                    <div class="flex-shrink-0 bg-indigo-100 p-2 rounded-full">${principleIcons[item.principle] || ''}</div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-semibold text-gray-800">${item.principle}</h4>
+                            <span class="text-xs font-bold px-2 py-1 rounded-full ${ratingColors[item.rating]}">${item.rating}</span>
+                        </div>
+                        <p class="text-gray-600 text-sm mt-1">${item.comment}</p>
+                    </div>
+                </div>
+            `).join('');
+
+            let suggestionsHtml = data.suggestions.map(suggestion => `
+                <li class="flex items-start space-x-3">
+                    <div class="flex-shrink-0 pt-1">
+                        <svg class="w-5 h-5 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <p class="text-gray-600">${suggestion}</p>
+                </li>
+            `).join('');
+
+            const resultHtml = `
+                <div class="fade-in space-y-6">
+                    <!-- Score and Summary -->
+                    <div class="text-center p-6 bg-gray-50 rounded-xl border">
+                        <h3 class="text-lg font-semibold text-gray-600">Overall Feng Shui Score</h3>
+                        <div class="relative w-32 h-32 mx-auto my-3">
+                            <svg class="w-full h-full" viewBox="0 0 100 100">
+                                <circle class="stroke-current text-gray-200" stroke-width="8" cx="50" cy="50" r="42" fill="transparent"></circle>
+                                <circle class="progress-ring__circle stroke-current ${scoreRingClass}"
+                                        stroke-width="8"
+                                        stroke-linecap="round"
+                                        cx="50" cy="50" r="42"
+                                        fill="transparent"
+                                        stroke-dasharray="${2 * Math.PI * 42}"
+                                        stroke-dashoffset="${2 * Math.PI * 42 * (1 - data.score / 100)}"
+                                        transform="rotate(-90 50 50)"></circle>
+                                <text x="50" y="50" font-family="Inter" class="text-3xl font-bold ${scoreColorClass}" text-anchor="middle" dy=".3em">${data.score}</text>
+                            </svg>
+                        </div>
+                        <p class="text-gray-700 font-medium italic max-w-md mx-auto">"${data.summary}"</p>
+                    </div>
+
+                    <div class="space-y-4 bg-gray-50 p-4 rounded-xl border">
+                        <h3 class="text-xl font-bold text-gray-800 text-center mb-4">Detailed Analysis</h3>
+                        <div class="space-y-3">${analysisHtml}</div>
+                    </div>
+
+                    <div class="space-y-4 bg-green-50 p-6 rounded-xl border border-green-200">
+                        <h3 class="text-xl font-bold text-green-800 text-center">Top Suggestions</h3>
+                        <ul class="space-y-3">${suggestionsHtml}</ul>
+                    </div>
+
+                    <button id="analyze-another-btn" class="mt-6 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-lg shadow-indigo-500/30">
+                        Analyze Another Room
+                    </button>
+                </div>
+            `;
+
+            resultsContainer.innerHTML = resultHtml;
+            resultsContainer.classList.remove('hidden');
+
+            document.getElementById('analyze-another-btn').addEventListener('click', resetUI);
+        }
+    </script>
+</body>
+</html>
